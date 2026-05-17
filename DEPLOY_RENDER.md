@@ -75,7 +75,19 @@ curl -X POST https://YOUR-SERVICE.onrender.com/register \
 | **Deploy failed** / health check | Open **Logs → Deploy**. Wait up to 5 min on free tier. Ensure `DATABASE_URL` is set (link **notes-db**). |
 | `Driver claims to not accept jdbcUrl, postgresql://...` | Redeploy with latest code — `RenderDatabaseEnvironmentPostProcessor` converts URL to JDBC. |
 | `Connection to localhost:5432 refused` | **Database not linked** to notes-api. See [Link the database](#link-the-database-critical) below. |
+| `The connection attempt failed` | **Delete `DATABASE_URL`** (external). Use internal `DB_HOST` (`dpg-xxxxx-a`). See below. |
 | DB connection error | Confirm **notes-db** is available; `SPRING_PROFILES_ACTIVE=postgres`; `DB_HOST` or `DATABASE_URL` set in Environment. |
+
+### Fix "The connection attempt failed"
+
+Render's `DATABASE_URL` / `connectionString` is often the **external** hostname (`....oregon-postgres.render.com`), which can fail from inside your Docker container.
+
+1. **notes-api → Environment** → delete **`DATABASE_URL`** if it exists
+2. Keep only internal fields from **notes-db**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+3. `DB_HOST` must look like `dpg-xxxxx-a` (short internal name), not `....render.com`
+4. Redeploy with latest code (Blueprint no longer injects `DATABASE_URL`)
+
+Deploy logs should show: `Using internal PostgreSQL at dpg-xxxxx-a:5432/notes_db`
 
 ### Link the database (critical)
 

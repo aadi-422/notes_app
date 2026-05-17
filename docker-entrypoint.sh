@@ -2,12 +2,8 @@
 set -e
 echo "=== notes-api startup ==="
 echo "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-<unset>}"
-if [ -n "$DATABASE_URL" ]; then
-  echo "DATABASE_URL is set (postgresql connection string)"
-else
-  echo "DATABASE_URL is NOT set"
-fi
-echo "DB_HOST=${DB_HOST:-<unset>}"
+echo "DB_HOST=${DB_HOST:-<unset>} (use internal host, e.g. dpg-xxxxx-a)"
+echo "DATABASE_URL=${DATABASE_URL:+<set — remove if external; prefer DB_HOST>}${DATABASE_URL:-<not set>}"
 echo "DB_PORT=${DB_PORT:-<unset>}"
 echo "DB_NAME=${DB_NAME:-<unset>}"
 echo "DB_USER=${DB_USER:-<unset>}"

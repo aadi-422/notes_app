@@ -43,7 +43,13 @@ public final class PostgresUrlParser {
     }
 
     public static String buildJdbcUrl(String host, String port, String database) {
-        return "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode=require";
+        return "jdbc:postgresql://"
+                + host
+                + ":"
+                + port
+                + "/"
+                + database
+                + "?sslmode=require&connectTimeout=60&socketTimeout=60";
     }
 
     private static String decode(String value) {
