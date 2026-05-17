@@ -1,5 +1,7 @@
-# JDBC url/user/pass are set by RenderDatabaseEnvironmentPostProcessor (do not default to localhost).
+# JDBC DataSource bean: PostgresDataSourceConfig (reads DATABASE_URL / DB_HOST from Render).
 spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
