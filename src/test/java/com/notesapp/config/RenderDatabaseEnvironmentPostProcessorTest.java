@@ -34,8 +34,19 @@ class RenderDatabaseEnvironmentPostProcessorTest {
     }
 
     @Test
+    void failsFastWhenPostgresProfileWithoutDatabaseConfig() {
+        StandardEnvironment env = environmentWith(Map.of("SPRING_PROFILES_ACTIVE", "postgres"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> processor.postProcessEnvironment(env, new SpringApplication()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PostgreSQL is not configured");
+    }
+
+    @Test
     void convertsDatabaseUrlWhenDbHostMissing() {
         StandardEnvironment env = environmentWith(Map.of(
+                "SPRING_PROFILES_ACTIVE", "postgres",
                 "DATABASE_URL",
                 "postgresql://notes_user:secret%40pass@dpg-example.oregon-postgres.render.com/notes_db"));
 
@@ -46,7 +57,6 @@ class RenderDatabaseEnvironmentPostProcessorTest {
         assertThat(env.getProperty("spring.datasource.url")).contains("sslmode=require");
         assertThat(env.getProperty("spring.datasource.username")).isEqualTo("notes_user");
         assertThat(env.getProperty("spring.datasource.password")).isEqualTo("secret@pass");
-        assertThat(env.getProperty("SPRING_PROFILES_ACTIVE")).isEqualTo("postgres");
     }
 
     @Test
