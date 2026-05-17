@@ -6,7 +6,6 @@ services:
     plan: free
     region: oregon
     healthCheckPath: /about
-
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: postgres
