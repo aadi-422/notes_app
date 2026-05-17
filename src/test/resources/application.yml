@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: sqlite
+  datasource:
+    url: jdbc:sqlite:./target/test-notes.db
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  jwt:
+    secret: test-jwt-secret-key-with-32-chars-min
+    expiration-ms: 3600000
+  about:
+    name: Test Developer
+    email: test@example.com

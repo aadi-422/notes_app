@@ -1,0 +1,35 @@
+package com.notesapp.config;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.SpringApplication;
+import org.springframework.core.env.StandardEnvironment;
+
+class RenderDatabaseEnvironmentPostProcessorTest {
+
+    private final RenderDatabaseEnvironmentPostProcessor processor =
+            new RenderDatabaseEnvironmentPostProcessor();
+
+    @Test
+    void convertsRenderPostgresUrlToJdbc() {
+        StandardEnvironment env = new StandardEnvironment();
+        env.setActiveProfiles("postgres");
+        System.setProperty("SPRING_PROFILES_ACTIVE", "postgres");
+        env.getSystemProperties().put("SPRING_PROFILES_ACTIVE", "postgres");
+        env.getSystemProperties()
+                .put(
+                        "DATABASE_URL",
+                        "postgresql://notes_user:secret%40pass@dpg-example.oregon-postgres.render.com/notes_db");
+
+        processor.postProcessEnvironment(env, new SpringApplication());
+
+        assertThat(env.getProperty("spring.datasource.url"))
+                .startsWith("jdbc:postgresql://dpg-example.oregon-postgres.render.com/notes_db");
+        assertThat(env.getProperty("spring.datasource.url")).contains("sslmode=require");
+        assertThat(env.getProperty("spring.datasource.username")).isEqualTo("notes_user");
+        assertThat(env.getProperty("spring.datasource.password")).isEqualTo("secret@pass");
+
+        System.clearProperty("SPRING_PROFILES_ACTIVE");
+    }
+}

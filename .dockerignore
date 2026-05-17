@@ -1,0 +1,14 @@
+target/
+.git/
+.github/
+.idea/
+*.iml
+.env
+.env.*
+!/.env.render.example
+data/
+*.db
+*.log
+README.md
+DEPLOY_RENDER.md
+agent-tools/
