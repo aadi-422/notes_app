@@ -74,7 +74,19 @@ curl -X POST https://YOUR-SERVICE.onrender.com/register \
 | **Build failed** (Docker) | Open **notes-api → Logs → Build**. Common fix: redeploy after pulling latest `Dockerfile` (removed broken `mvn go-offline` step). |
 | **Deploy failed** / health check | Open **Logs → Deploy**. Wait up to 5 min on free tier. Ensure `DATABASE_URL` is set (link **notes-db**). |
 | `Driver claims to not accept jdbcUrl, postgresql://...` | Redeploy with latest code — `RenderDatabaseEnvironmentPostProcessor` converts URL to JDBC. |
-| DB connection error | Confirm **notes-db** is available; `SPRING_PROFILES_ACTIVE=postgres`; use internal DB link from Blueprint. |
+| `Connection to localhost:5432 refused` | **Database not linked** to notes-api. See [Link the database](#link-the-database-critical) below. |
+| DB connection error | Confirm **notes-db** is available; `SPRING_PROFILES_ACTIVE=postgres`; `DB_HOST` or `DATABASE_URL` set in Environment. |
+
+### Link the database (critical)
+
+If logs show `localhost:5432`, Render is **not** passing database credentials to the web service.
+
+1. Render Dashboard → **notes-api** → **Environment**
+2. Confirm these exist (values hidden): `DATABASE_URL`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+3. If missing: **Add Environment Variable** → **Add from database** → select **notes-db** → add connection string and/or individual fields
+4. **Save** and **Manual Deploy**
+
+Or redeploy the whole Blueprint so `render.yaml` injects them automatically.
 | 502 on cold start | Free tier sleeps ~50s; retry or upgrade plan |
 | Invalid JWT / startup error | Set `JWT_SECRET` to 32+ characters in Environment (or use Blueprint `generateValue`) |
 | Data lost after deploy | Do not use SQLite on Render; use linked Postgres |

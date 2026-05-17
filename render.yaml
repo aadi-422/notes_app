@@ -6,6 +6,7 @@ services:
     plan: free
     region: oregon
     healthCheckPath: /about
+    healthCheckGracePeriod: 300
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: postgres
@@ -17,10 +18,32 @@ services:
         value: Notes API Developer
       - key: ABOUT_EMAIL
         value: developer@example.com
+      # Full connection string (postgresql://...)
       - key: DATABASE_URL
         fromDatabase:
           name: notes-db
           property: connectionString
+      # Individual fields — used if DATABASE_URL is missing (PostgresDataSourceConfig)
+      - key: DB_HOST
+        fromDatabase:
+          name: notes-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: notes-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: notes-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: notes-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: notes-db
+          property: password
       - key: JAVA_TOOL_OPTIONS
         value: "-XX:+UseContainerSupport -Xmx384m"
 

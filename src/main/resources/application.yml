@@ -50,15 +50,4 @@ spring:
   config:
     activate:
       on-profile: postgres
-  datasource:
-    # Do NOT bind DATABASE_URL directly — Render uses postgresql:// (see RenderDatabaseEnvironmentPostProcessor)
-    url: jdbc:postgresql://localhost:5432/notes_db
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      connection-timeout: 60000
-      initialization-fail-timeout: 120000
-      maximum-pool-size: 5
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    import: application-postgres.yml

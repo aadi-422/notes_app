@@ -28,4 +28,10 @@ class RenderDatabaseEnvironmentPostProcessorTest {
         assertThat(env.getProperty("spring.datasource.password")).isEqualTo("secret@pass");
         assertThat(env.getProperty("SPRING_PROFILES_ACTIVE")).isEqualTo("postgres");
     }
+
+    @Test
+    void parserBuildsJdbcFromHostParts() {
+        String jdbc = PostgresUrlParser.buildJdbcUrl("dpg-internal", "5432", "notes_db");
+        assertThat(jdbc).isEqualTo("jdbc:postgresql://dpg-internal:5432/notes_db?sslmode=require");
+    }
 }

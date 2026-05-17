@@ -1,7 +1,5 @@
 package com.notesapp.config;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.boot.SpringApplication;
@@ -10,8 +8,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
 /**
- * Converts Render/Heroku {@code postgresql://} DATABASE_URL into Spring JDBC datasource properties.
- * Runs whenever DATABASE_URL is a non-JDBC postgres URL (no profile check — profiles may not be active yet).
+ * Converts Render {@code postgresql://} DATABASE_URL into Spring JDBC properties (highest priority).
  */
 public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
@@ -23,27 +20,46 @@ public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostPr
                 environment.getProperty("DATABASE_URL"),
                 environment.getProperty("DATABASE_INTERNAL_URL"));
 
-        if (databaseUrl == null || databaseUrl.isBlank() || databaseUrl.startsWith("jdbc:")) {
+        boolean postgresProfile = isPostgresProfile(environment);
+        System.out.println("[notes-api] SPRING_PROFILES_ACTIVE="
+                + environment.getProperty("SPRING_PROFILES_ACTIVE", "?")
+                + ", postgresProfile="
+                + postgresProfile
+                + ", DATABASE_URL set="
+                + (databaseUrl != null && !databaseUrl.isBlank())
+                + ", DB_HOST="
+                + environment.getProperty("DB_HOST", "<not set>"));
+
+        if (!PostgresUrlParser.isPostgresScheme(databaseUrl)) {
+            if (postgresProfile && isBlank(environment.getProperty("DB_HOST"))) {
+                System.err.println(
+                        "[notes-api] ERROR: postgres profile active but DATABASE_URL and DB_HOST are missing. "
+                                + "On Render: notes-api → Environment → Link Database → notes-db");
+            }
             return;
         }
 
-        if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
-            return;
-        }
+        PostgresUrlParser.ParsedJdbc parsed = PostgresUrlParser.parse(databaseUrl);
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("spring.datasource.url", parsed.jdbcUrl());
+        properties.put("spring.datasource.username", parsed.username());
+        properties.put("spring.datasource.password", parsed.password());
+        properties.put("spring.datasource.driver-class-name", "org.postgresql.Driver");
+        properties.put("SPRING_PROFILES_ACTIVE", "postgres");
 
-        try {
-            ParsedPostgresUrl parsed = ParsedPostgresUrl.parse(databaseUrl);
-            Map<String, Object> properties = new HashMap<>();
-            properties.put("spring.datasource.url", parsed.jdbcUrl());
-            properties.put("spring.datasource.username", parsed.username());
-            properties.put("spring.datasource.password", parsed.password());
-            properties.put("spring.datasource.driver-class-name", "org.postgresql.Driver");
-            properties.put("SPRING_PROFILES_ACTIVE", "postgres");
+        environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE, properties));
+        System.out.println("[notes-api] Using JDBC URL from DATABASE_URL (host parsed from connection string)");
+    }
 
-            environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE, properties));
-        } catch (RuntimeException ex) {
-            throw new IllegalStateException("Failed to parse DATABASE_URL for PostgreSQL: " + ex.getMessage(), ex);
-        }
+    private static boolean isPostgresProfile(ConfigurableEnvironment environment) {
+        String active = firstNonBlank(
+                environment.getProperty("SPRING_PROFILES_ACTIVE"),
+                environment.getProperty("spring.profiles.active"));
+        return active != null && active.contains("postgres");
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private static String firstNonBlank(String... values) {
@@ -53,40 +69,5 @@ public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostPr
             }
         }
         return null;
-    }
-
-    private record ParsedPostgresUrl(String jdbcUrl, String username, String password) {
-
-        static ParsedPostgresUrl parse(String databaseUrl) {
-            String normalized = databaseUrl.replaceFirst("^postgres(ql)?://", "");
-            int at = normalized.lastIndexOf('@');
-            if (at < 0) {
-                throw new IllegalArgumentException("missing credentials (expected user:pass@host/db)");
-            }
-
-            String userInfo = normalized.substring(0, at);
-            String hostAndDb = normalized.substring(at + 1);
-
-            String username;
-            String password = "";
-            int colon = userInfo.indexOf(':');
-            if (colon >= 0) {
-                username = decode(userInfo.substring(0, colon));
-                password = decode(userInfo.substring(colon + 1));
-            } else {
-                username = decode(userInfo);
-            }
-
-            String jdbcUrl = "jdbc:postgresql://" + hostAndDb;
-            if (!jdbcUrl.contains("sslmode=")) {
-                jdbcUrl += (jdbcUrl.contains("?") ? "&" : "?") + "sslmode=require";
-            }
-
-            return new ParsedPostgresUrl(jdbcUrl, username, password);
-        }
-
-        private static String decode(String value) {
-            return URLDecoder.decode(value, StandardCharsets.UTF_8);
-        }
     }
 }

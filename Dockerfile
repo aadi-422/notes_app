@@ -13,13 +13,16 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 RUN groupadd -r spring && useradd -r -g spring spring
-USER spring:spring
 
 COPY --from=build /app/target/notes-api-1.0.0.jar app.jar
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh && chown -R spring:spring /app
+
+USER spring:spring
 
 ENV SPRING_PROFILES_ACTIVE=postgres
 
 EXPOSE 8080
 
-# Render sets PORT; Spring reads server.port=${PORT}
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# Render sets PORT; entrypoint logs DB env before starting (see deploy logs)
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
