@@ -71,11 +71,22 @@ curl -X POST https://YOUR-SERVICE.onrender.com/register \
 
 | Issue | Fix |
 |-------|-----|
-| Build fails | Check Render build logs; run `docker build .` locally |
-| DB connection error | Ensure `SPRING_PROFILES_ACTIVE=postgres` and Postgres is **linked** |
+| **Build failed** (Docker) | Open **notes-api → Logs → Build**. Common fix: redeploy after pulling latest `Dockerfile` (removed broken `mvn go-offline` step). |
+| **Deploy failed** / health check | Open **Logs → Deploy**. Wait up to 5 min on free tier. Ensure `DATABASE_URL` is set (link **notes-db**). |
+| `Driver claims to not accept jdbcUrl, postgresql://...` | Redeploy with latest code — `RenderDatabaseEnvironmentPostProcessor` converts URL to JDBC. |
+| DB connection error | Confirm **notes-db** is available; `SPRING_PROFILES_ACTIVE=postgres`; use internal DB link from Blueprint. |
 | 502 on cold start | Free tier sleeps ~50s; retry or upgrade plan |
-| Invalid JWT / startup error | Set `JWT_SECRET` to 32+ characters in Environment |
+| Invalid JWT / startup error | Set `JWT_SECRET` to 32+ characters in Environment (or use Blueprint `generateValue`) |
 | Data lost after deploy | Do not use SQLite on Render; use linked Postgres |
+
+### Read the failure log
+
+1. Render Dashboard → **notes-api** → **Logs**
+2. If **Build** tab shows errors → Docker/Maven issue (fix Dockerfile, push, redeploy)
+3. If **Deploy** tab shows `Application failed to start` → expand stack trace:
+   - `postgresql://` in JDBC error → pull latest code and redeploy
+   - `JWT_SECRET must be at least 32` → add/regenerate `JWT_SECRET` in Environment
+   - `Connection refused` / `timeout` → database not linked or still provisioning; redeploy after **notes-db** is live
 
 ## Notes
 

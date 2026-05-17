@@ -1,6 +1,5 @@
 package com.notesapp.config;
 
-import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -11,7 +10,8 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
 /**
- * Converts Render/Heroku-style {@code postgresql://} URLs into Spring JDBC properties.
+ * Converts Render/Heroku {@code postgresql://} DATABASE_URL into Spring JDBC datasource properties.
+ * Runs whenever DATABASE_URL is a non-JDBC postgres URL (no profile check — profiles may not be active yet).
  */
 public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
@@ -19,27 +19,40 @@ public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostPr
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        if (!isPostgresProfile(environment)) {
-            return;
-        }
+        String databaseUrl = firstNonBlank(
+                environment.getProperty("DATABASE_URL"),
+                environment.getProperty("DATABASE_INTERNAL_URL"));
 
-        String databaseUrl = environment.getProperty("DATABASE_URL");
         if (databaseUrl == null || databaseUrl.isBlank() || databaseUrl.startsWith("jdbc:")) {
             return;
         }
 
-        ParsedPostgresUrl parsed = ParsedPostgresUrl.parse(databaseUrl);
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("spring.datasource.url", parsed.jdbcUrl());
-        properties.put("spring.datasource.username", parsed.username());
-        properties.put("spring.datasource.password", parsed.password());
+        if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
+            return;
+        }
 
-        environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE, properties));
+        try {
+            ParsedPostgresUrl parsed = ParsedPostgresUrl.parse(databaseUrl);
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("spring.datasource.url", parsed.jdbcUrl());
+            properties.put("spring.datasource.username", parsed.username());
+            properties.put("spring.datasource.password", parsed.password());
+            properties.put("spring.datasource.driver-class-name", "org.postgresql.Driver");
+            properties.put("SPRING_PROFILES_ACTIVE", "postgres");
+
+            environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE, properties));
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("Failed to parse DATABASE_URL for PostgreSQL: " + ex.getMessage(), ex);
+        }
     }
 
-    private boolean isPostgresProfile(ConfigurableEnvironment environment) {
-        String active = environment.getProperty("SPRING_PROFILES_ACTIVE", "sqlite");
-        return active.contains("postgres");
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private record ParsedPostgresUrl(String jdbcUrl, String username, String password) {
@@ -48,7 +61,7 @@ public class RenderDatabaseEnvironmentPostProcessor implements EnvironmentPostPr
             String normalized = databaseUrl.replaceFirst("^postgres(ql)?://", "");
             int at = normalized.lastIndexOf('@');
             if (at < 0) {
-                throw new IllegalArgumentException("Invalid DATABASE_URL: missing credentials");
+                throw new IllegalArgumentException("missing credentials (expected user:pass@host/db)");
             }
 
             String userInfo = normalized.substring(0, at);

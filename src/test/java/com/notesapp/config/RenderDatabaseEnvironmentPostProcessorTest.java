@@ -12,11 +12,8 @@ class RenderDatabaseEnvironmentPostProcessorTest {
             new RenderDatabaseEnvironmentPostProcessor();
 
     @Test
-    void convertsRenderPostgresUrlToJdbc() {
+    void convertsRenderPostgresUrlToJdbcWithoutActiveProfile() {
         StandardEnvironment env = new StandardEnvironment();
-        env.setActiveProfiles("postgres");
-        System.setProperty("SPRING_PROFILES_ACTIVE", "postgres");
-        env.getSystemProperties().put("SPRING_PROFILES_ACTIVE", "postgres");
         env.getSystemProperties()
                 .put(
                         "DATABASE_URL",
@@ -29,7 +26,6 @@ class RenderDatabaseEnvironmentPostProcessorTest {
         assertThat(env.getProperty("spring.datasource.url")).contains("sslmode=require");
         assertThat(env.getProperty("spring.datasource.username")).isEqualTo("notes_user");
         assertThat(env.getProperty("spring.datasource.password")).isEqualTo("secret@pass");
-
-        System.clearProperty("SPRING_PROFILES_ACTIVE");
+        assertThat(env.getProperty("SPRING_PROFILES_ACTIVE")).isEqualTo("postgres");
     }
 }

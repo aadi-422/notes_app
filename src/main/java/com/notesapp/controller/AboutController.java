@@ -29,8 +29,18 @@ public class AboutController {
                 "archived notes",
                 "PATCH /notes/{id}/archive lets users hide finished notes without deleting them.");
 
-        return new AboutResponse(
-                appProperties.about().name(), appProperties.about().email(), features);
+        String name = "Notes API Developer";
+        String email = "developer@example.com";
+        if (appProperties.about() != null) {
+            if (appProperties.about().name() != null && !appProperties.about().name().isBlank()) {
+                name = appProperties.about().name();
+            }
+            if (appProperties.about().email() != null && !appProperties.about().email().isBlank()) {
+                email = appProperties.about().email();
+            }
+        }
+
+        return new AboutResponse(name, email, features);
     }
 
     public record AboutResponse(

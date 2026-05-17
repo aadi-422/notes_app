@@ -1,5 +1,4 @@
 # Render Blueprint: https://render.com/docs/blueprint-spec
-# Deploy: Dashboard → New → Blueprint → connect repo, or use "Apply" on an existing Blueprint.
 services:
   - type: web
     name: notes-api
@@ -7,6 +6,8 @@ services:
     plan: free
     region: oregon
     healthCheckPath: /about
+    # Free tier JVM + DB can take 2–3 min on first deploy
+    healthCheckGracePeriod: 300
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: postgres
@@ -15,15 +16,15 @@ services:
       - key: JWT_EXPIRATION_MS
         value: "86400000"
       - key: ABOUT_NAME
-        sync: false
+        value: Notes API Developer
       - key: ABOUT_EMAIL
-        sync: false
+        value: developer@example.com
       - key: DATABASE_URL
         fromDatabase:
           name: notes-db
           property: connectionString
       - key: JAVA_TOOL_OPTIONS
-        value: "-XX:+UseContainerSupport"
+        value: "-XX:+UseContainerSupport -Xmx384m"
 
 databases:
   - name: notes-db
